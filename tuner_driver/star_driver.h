@@ -231,14 +231,22 @@ Tun_Status TUN_Set_Audio_IF(tU8 deviceAddress, tU8 SAIMode, tU32 SAIConfig);
 Tun_Status TUN_Set_Blend(tU8 deviceAddress, tU8 blendMode);
 Tun_Status TUN_Set_RDS (tU8 deviceAddress, int channelID, RDS_Action rdsAction);
 Tun_Status TUN_Read_RDS (tU8 deviceAddress, int channelID, RDS_Buffer *pRDSbuffer);
+
+#if 0   // not use
 Tun_Status TUN_AF_Start (tU8 deviceAddress, int channelID, tU32 alterFreq, tU32 antSelection, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_End(tU8 deviceAddress, int channelID, tU32 freqAfterAFEnd, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_Check (tU8 deviceAddress, int channelID, tU32 frequency, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_Switch (tU8 deviceAddress, int channelID, tU32 frequency);
 Tun_Status TUN_Get_AFquality (tU8 deviceAddress, int channelID, AF_SignalQuality *pAFquality);
+#endif
 Tun_Status TUN_Wait_Ready(tU8 deviceAddress, int channelID, int msTimeOut);
 Tun_Status TUN_Get_TunedFreq(tU8 deviceAddress, int channelID, tU32 *pFreq);
+
+#if 0
 Tun_Status TUN_Download_BootCode(tU8 deviceAddress, Device_Type deviceType);
+#else
+Tun_Status TUN_Download_BootCode(tU8 deviceAddress);
+#endif
 Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress);
 
 

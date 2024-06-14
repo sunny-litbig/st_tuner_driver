@@ -12,6 +12,7 @@ SRCS = \
 	./sys_driver/src/star_gpio.c \
 	./sys_driver/src/star_i2c.c \
 	./tuner_driver/star_protocol.c \
+	./tuner_driver/star_driver.c \
 	test_control.c
 
 OBJS = $(SRCS:.c=.o)

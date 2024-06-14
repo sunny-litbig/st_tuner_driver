@@ -27,120 +27,11 @@
 #include "star_driver.h"
 #include "radio_trace.h"
 
-#if defined(TDA7708_TUNER)
-	
-	#if defined(TDA7708_BOOTCODE_OM_VERSION_4_16_0)	/*For TDA7708 CB*/
-		#include "TDA7708_OM_v4.16.0.h"
-		#include "TDA7708_OM_v4.16.0.boot.h"
+// Boot Code for Telechips HD Radio
+//#include "TDA7707_OM_v7.22.0."
+#include "TDA7707_OM_v7.22.0.boot.h"
 
-		// There is no customized setting for TDA7708OM V4.16.0
-		/*
-		#ifdef STAR_CUSTOMIZED_SETTING
-			#define CMT_VERSION_TDA7708_OM_V4_16_0
-			#ifdef CMT_DEVICE_INDEPENDENT
-				#define CUSTOM_ARRAY coeffInit
-			#else
-				#define CUSTOM_ARRAY coeffInit_TDA7708
-			#endif
-		#endif
-		*/
-	#elif defined(TDA7708L_BOOTCODE_OM_V2_6_0)		/* For TDA7708L */
-		#include "TDA7708L_OM_v2.6.0.h"
-		#include "TDA7708L_OM_v2.6.0.boot.h"
-		#ifdef STAR_CUSTOMIZED_SETTING
-			#define CMT_VERSION_TDA7708L_OM_V2_6_0
-			#ifdef CMT_DEVICE_INDEPENDENT
-				#define CUSTOM_ARRAY coeffInit
-			#else
-				#define CUSTOM_ARRAY coeffInit_TDA7708
-			#endif
-		#endif
-		
-	#elif defined(TDA7708LX_BOOTCODE_OM_V2_6_0)		/* For TDA7708LX */
-		#include "TDA7708LX_OM_v2.6.0.h"
-		#include "TDA7708LX_OM_v2.6.0.boot.h"
-		#ifdef STAR_CUSTOMIZED_SETTING
-			#define CMT_VERSION_TDA7708LX_OM_V2_6_0
-			#ifdef CMT_DEVICE_INDEPENDENT
-				#define CUSTOM_ARRAY coeffInit
-			#else
-				#define CUSTOM_ARRAY coeffInit_TDA7708
-			#endif
-		#endif
-		
-	#endif
-	
-#elif defined(TDA7707_TUNER_VPA)
-
-#ifdef TDA7707_BOOTCODE_VERSION_7_16_0 /*For TDA7707EB*/
-	#include "TDA7707_OM_v7.16.0.h"
-	#include "TDA7707_OM_v7.16.0.boot.h"
-
-	#ifdef STAR_CUSTOMIZED_SETTING
-
-		#define CMT_VERSION_TDA7707_OM_V7_16_0
-		#include "TDA7707_OM_v7.16.0_SZ_PD.h"
-
-		#ifdef CMT_DEVICE_INDEPENDENT
-		#define CUSTOM_ARRAY coeffInit
-		#else
-		#define CUSTOM_ARRAY coeffInit_PD_TDA7707
-		#endif
-
-	#endif   /* STAR_CUSTOMIZED_SETTING */
-#endif   /* TDA7707_BOOTCODE_VERSION_7_16_0 */
-
-#ifdef TDA7707_BOOTCODE_VERSION_7_18_0 /*For TDA7707EB*/
-	#include "TDA7707_OM_v7.18.0.h"
-	#include "TDA7707_OM_v7.18.0.boot.h"
-#endif   /* TDA7707_BOOTCODE_VERSION_7_18_0 */
-	
-#elif defined(TDA7707_TUNER_BACKGROUND)
-
-#ifdef TDA7707_BOOTCODE_VERSION_7_16_0   /*For TDA7707EB*/
-	#include "TDA7707_OM_v7.16.0.h"
-	#include "TDA7707_OM_v7.16.0.boot.h"
-
-	#ifdef STAR_CUSTOMIZED_SETTING
-		#define CMT_VERSION_TDA7707_OM_V7_16_0
-		#include "TDA7707_OM_v7.16.0_SZ_BG.h"
-
-		#ifdef CMT_DEVICE_INDEPENDENT
-		#define CUSTOM_ARRAY coeffInit
-		#else
-		#define CUSTOM_ARRAY coeffInit_BG_TDA7707
-		#endif
-
-	#endif   /* STAR_CUSTOMIZED_SETTING */
-#endif   /* TDA7707_BOOTCODE_VERSION_7_16_0 */
-
-#ifdef TDA7707_BOOTCODE_VERSION_7_18_0   /*For TDA7707EB*/
-	#include "TDA7707_OM_v7.18.0.h"
-	#include "TDA7707_OM_v7.18.0.boot.h"
-#endif   /* TDA7707_BOOTCODE_VERSION_7_18_0 */
-
-#endif 
-
-#ifdef STA710_TUNER
-	#ifdef STA710_BOOTCODE_VERSION_5_10_1   /*For SDA710EC*/
-	#include "STA710_OM_v5.10.1.h"
-	#include "STA710_OM_v5.10.1.boot.h"
-
-	#ifdef STA710_CUSTOMIZED_SETTING
-		//#define CMT_VERSION_STA710_OM_V5_10_1
-		#include "STA710_OM_v5.10.1_SZ.h"
-
-		#ifdef CMT_DEVICE_INDEPENDENT
-		#define CUSTOM_ARRAY coeffInit
-		#else
-		#define CUSTOM_ARRAY coeffInit_STA710
-		#endif
-
-	#endif   /* STA710_CUSTOMIZED_SETTING */
-	#endif   /* STA710_BOOTCODE_VERSION_5_10_1 */
-#endif
-
-
+#if 0
 /*************************************************************************************
 Function		: Star_Get_TunerBusyStatus
 Description	: Get Tuner busy status by retrieving the busy bit in the STAR_ADDRESS_SCSR0 of star tuner.
@@ -1755,7 +1646,7 @@ Tun_Status TUN_Get_TunedFreq(tU8 deviceAddress, int channelID, tU32 *pFreq)
 
 	return tunerStatus; 
 }
-
+#endif
 
 /*************************************************************************************
 Function		: TUN_Download_BootCode
@@ -1767,13 +1658,18 @@ Parameters	:
 
 Return Value	: Tun_Status
 *************************************************************************************/
+#if 0
 Tun_Status TUN_Download_BootCode(tU8 deviceAddress, Device_Type deviceType)
+#else
+Tun_Status TUN_Download_BootCode(tU8 deviceAddress)
+#endif
 {
 	Tun_Status tunerStatus = RET_ERROR;
 	tU32 addr;
 	int byteNum, i = 0;		/* Normally bootcode size < 65k */
 	tU8 * pBootCode = NULL;
 	
+#if 0
 #if defined(TDA7708_TUNER)
 	if (deviceType == DEV_TDA7708) pBootCode = CMOST_Firmware_TDA7708;
 #elif defined(TDA7707_TUNER_VPA) || defined(TDA7707_TUNER_BACKGROUND)
@@ -1782,6 +1678,9 @@ Tun_Status TUN_Download_BootCode(tU8 deviceAddress, Device_Type deviceType)
 
 #if defined(STA710_TUNER)
 	if (deviceType == DEV_STA710) pBootCode = CMOST_Firmware_STA710;
+#endif
+#else
+    pBootCode = CMOST_Firmware;
 #endif
 
 	if (pBootCode)
