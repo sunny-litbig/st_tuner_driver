@@ -61,6 +61,7 @@ typedef enum
 	RET_ERR_BOOTCODE		,	/* tuner bootcode download error */
 	RET_ERR_SYS_FAILURE 	,	/* System failure, need reboot */
 	RET_ERR_BUSY,
+	RET_ERR_I2C_COMM,       // I2C read / write communication error
 	
 	RET_ERR_MAX_NUM
 } Tun_Status;

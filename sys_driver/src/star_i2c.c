@@ -4,6 +4,7 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 #include "star_i2c.h"
 
 int fd_star_i2c;
@@ -64,6 +65,8 @@ int star_i2c_write(unsigned char chip_addr, unsigned char *wr_buf, unsigned shor
 
     if ( status < 0 )
     {
+        printf("errno = %d\n", errno);
+        perror("i2c write eror occurred");
         printf("[%s] i2c fail (%d).\n",__func__, status);
         return -1;
     }

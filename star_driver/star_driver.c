@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "radio_public.h"
 #include "star_protocol.h"
@@ -850,48 +851,6 @@ Tun_Status TUN_Get_ChannelQuality (tU8 deviceAddress, int channelID, tBool bVPAM
 
 
 /*************************************************************************************
-Function		: TUN_Set_BB_IF
-Description 	: This function is used to configure the digital Base Band interface and maps the digital Base Band 
-			  and the digital Audio interfaces to I/Os. Not all combinations of BB interface and Audio interface are allowed, 
-			  details see the document of Star tuner MCU control guideline. 
-			
-Parameters	:
-		deviceAddress :  star tuner I2C address.
-		BBConfig
-			Audio interface configuration and Base Band (IF) interface configuration
-			
-Return Value	: Tun_Status					
-*************************************************************************************/
-Tun_Status TUN_Set_BB_IF(tU8 deviceAddress, tU32 BBConfig)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_SET_BB_IF;
-	int cmdParamNum = 1;
-	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	memset(paramData, 0x00, cmdParamNum * 3);
-	paramData[0] = (BBConfig >> 16) & 0xFF;
-	paramData[1] = (BBConfig >> 8) & 0xFF;
-	paramData[2] = (BBConfig & 0xFF);
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-
-#ifdef TRACE_STAR_CMD_SET_BB_IF			
-	PRINTF("Star_Command_Communicate = %s, BBConfig = %d", RetStatusName[tunerStatus].Name, BBConfig);
-#endif
-
-#else
-#endif	
-
-	return tunerStatus;
-}
-
-
-/*************************************************************************************
 Function		: TUN_conf_BB_SAI
 Description	: This function is used to configure the baseband SAI interface.
 			The SAI is configured either in MUX mode or AFE mode.
@@ -991,73 +950,6 @@ Tun_Status TUN_conf_JESD204(tU8 deviceAddress, tU32 mode, tU32 config, tU32 test
 
 #ifdef TRACE_STAR_CMD_CONF_JESD204
 	PRINTF("Star_Command_Communicate = %s, mode = 0x%06x, config = 0x%06x, testnum = 0x%06x, testchar = 0x%06x, ILAM = 0x%06x, ILAK = 0x%06x", RetStatusName[tunerStatus].Name, mode, config, testnum, testchar, ilam, ilak);
-#endif
-
-#else
-#endif	
-
-	return tunerStatus;
-}
-
-
-/*************************************************************************************
-Function		: TUN_Set_Audio_IF
-Description	: This function is used to set the audio DAC and audio SAI input and output channel.
-			
-Parameters	:
-		deviceAddress :  star tuner I2C address.
-		SAIMode :  Audio SAI config
-			Bit [2] : audio SAI input enable/disable	0: off	1: on
-			Bit [1] : audio SAI output enable/disable	0: off	1: on
-			Bit [0] : audio DAC enable/disable		0: off	1: on
-			
-		SAIConfig: 	
-			Bit [10] : SAI Word Select Configuration
-				0: SAI WS is 50% duty cycle (default)
-				1: SAI WS is a single pulse signal
-			Bit [9] : 	SAI Audio Data Sign Extension
-				0: SAI Audio Data Sign is not extended to MSB, filled with zeros
-				1: SAI Audio Data Sign is extended to MSB (default)
-			Bit [8] : SAI Audio WS Polarity
-				0: SAI Audio WS Polarity is high (1 Right / 0 Left)
-				1: SAI Audio WS Polarity is low (0 Right / 1 Left) (default)
-			Bit [7] : SAI Audio Revert Data Sequence
-				0: SAI Audio Data is not reverted (not twizzeld) (default)
-				1: SAI Audio Data is reverted (twizzeld)
-			Bit [6] : SAI Audio Data Delay
-				0: SAI Audio Data is delayed vs. WS edge (I2S mode) (default)
-				1: SAI Audio Data is not delayed vs. WS edge
-			Bit [5] : SAI Audio Data Length
-				0: SAI Audio Data length is 16L + 16R
-				1: SAI Audio Data length is 32L + 32R (default)
-			Bit [4] : SAI Audio Data Clock Polarity
-				0: SAI Audio Clock is not inverted
-				1: SAI Audio Clock is inverted (default)
-			Bit [3:0] : 0x0
-			
-Return Value	: Tun_Status					
-*************************************************************************************/
-Tun_Status TUN_Set_Audio_IF(tU8 deviceAddress, tU8 SAIMode, tU32 SAIConfig)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_SET_AUDIO_IF;
-	int cmdParamNum = 2;
-	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	memset(paramData, 0x00, cmdParamNum * 3);
-	paramData[2] = SAIMode;
-	paramData[3] = (SAIConfig >> 16) & 0xFF;
-	paramData[4] = (SAIConfig >> 8) & 0xFF;
-	paramData[5] = (SAIConfig & 0xFF);
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-
-#ifdef TRACE_STAR_CMD_CONF_BB_SAI
-	PRINTF("Star_Command_Communicate = %s, SAIMode = 0x%06x, SAIConfig = 0x%06x", RetStatusName[tunerStatus].Name, SAIMode, SAIConfig);
 #endif
 
 #else
@@ -1649,7 +1541,105 @@ Tun_Status TUN_Get_TunedFreq(tU8 deviceAddress, int channelID, tU32 *pFreq)
 #endif
 
 
+/*************************************************************************************
+Function		: TUN_Set_Audio_IF
+Description	: This function is used to set the audio DAC and audio SAI input and output channel.
+			
+Parameters	:
+		deviceAddress :  star tuner I2C address.
+		SAIMode :  Audio SAI config
+			Bit [2] : audio SAI input enable/disable	0: off	1: on
+			Bit [1] : audio SAI output enable/disable	0: off	1: on
+			Bit [0] : audio DAC enable/disable		0: off	1: on
+			
+		SAIConfig: 	
+			Bit [10] : SAI Word Select Configuration
+				0: SAI WS is 50% duty cycle (default)
+				1: SAI WS is a single pulse signal
+			Bit [9] : 	SAI Audio Data Sign Extension
+				0: SAI Audio Data Sign is not extended to MSB, filled with zeros
+				1: SAI Audio Data Sign is extended to MSB (default)
+			Bit [8] : SAI Audio WS Polarity
+				0: SAI Audio WS Polarity is high (1 Right / 0 Left)
+				1: SAI Audio WS Polarity is low (0 Right / 1 Left) (default)
+			Bit [7] : SAI Audio Revert Data Sequence
+				0: SAI Audio Data is not reverted (not twizzeld) (default)
+				1: SAI Audio Data is reverted (twizzeld)
+			Bit [6] : SAI Audio Data Delay
+				0: SAI Audio Data is delayed vs. WS edge (I2S mode) (default)
+				1: SAI Audio Data is not delayed vs. WS edge
+			Bit [5] : SAI Audio Data Length
+				0: SAI Audio Data length is 16L + 16R
+				1: SAI Audio Data length is 32L + 32R (default)
+			Bit [4] : SAI Audio Data Clock Polarity
+				0: SAI Audio Clock is not inverted
+				1: SAI Audio Clock is inverted (default)
+			Bit [3:0] : 0x0
+			
+Return Value	: Tun_Status					
+*************************************************************************************/
+Tun_Status TUN_Set_Audio_IF(tU8 deviceAddress, tU8 SAIMode, tU32 SAIConfig)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_SET_AUDIO_IF;
+	int cmdParamNum = 2;
+	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
 
+	memset(paramData, 0x00, cmdParamNum * 3);
+	paramData[2] = SAIMode;
+	paramData[3] = (SAIConfig >> 16) & 0xFF;
+	paramData[4] = (SAIConfig >> 8) & 0xFF;
+	paramData[5] = (SAIConfig & 0xFF);
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+
+#ifdef TRACE_STAR_CMD_CONF_BB_SAI
+	PRINTF("Star_Command_Communicate = %s, SAIMode = 0x%06x, SAIConfig = 0x%06x", RetStatusName[tunerStatus].Name, SAIMode, SAIConfig);
+#endif
+
+	return tunerStatus;
+}
+
+
+/*************************************************************************************
+Function		: TUN_Set_BB_IF
+Description 	: This function is used to configure the digital Base Band interface and maps the digital Base Band 
+			  and the digital Audio interfaces to I/Os. Not all combinations of BB interface and Audio interface are allowed, 
+			  details see the document of Star tuner MCU control guideline. 
+			
+Parameters	:
+		deviceAddress :  star tuner I2C address.
+		BBConfig
+			Audio interface configuration and Base Band (IF) interface configuration
+			
+Return Value	: Tun_Status					
+*************************************************************************************/
+Tun_Status TUN_Set_BB_IF(tU8 deviceAddress, tU32 BBConfig)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_SET_BB_IF;
+	int cmdParamNum = 1;
+	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
+
+	memset(paramData, 0x00, cmdParamNum * 3);
+	paramData[0] = (BBConfig >> 16) & 0xFF;
+	paramData[1] = (BBConfig >> 8) & 0xFF;
+	paramData[2] = (BBConfig & 0xFF);
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+
+#ifdef TRACE_STAR_CMD_SET_BB_IF			
+	PRINTF("Star_Command_Communicate = %s, BBConfig = %d", RetStatusName[tunerStatus].Name, BBConfig);
+#endif
+
+	return tunerStatus;
+}
 
 
 /*************************************************************************************
@@ -1672,7 +1662,7 @@ Tun_Status TUN_Download_BootCode(tU8 deviceAddress)
 	tU32 addr;
 	int byteNum, i = 0;		/* Normally bootcode size < 65k */
 	tU8 * pBootCode = NULL;
-	
+
 #if 0
 #if defined(TDA7708_TUNER)
 	if (deviceType == DEV_TDA7708) pBootCode = CMOST_Firmware_TDA7708;
@@ -1704,7 +1694,7 @@ Tun_Status TUN_Download_BootCode(tU8 deviceAddress)
 	return tunerStatus;
 }
 
-
+#if 0
 /*************************************************************************************
 Function		: TUN_Download_CustomizedCoeffs
 Description	: this function is used to write customized data in array(CUSTOM_ARRAY) to Star tuner by write mem command
@@ -1731,6 +1721,6 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress)
 
 	return tunerStatus;
 }
-
+#endif
 
 
