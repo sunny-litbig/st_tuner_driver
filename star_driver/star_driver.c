@@ -26,11 +26,28 @@
 #include "radio_public.h"
 #include "star_protocol.h"
 #include "star_driver.h"
-#include "radio_trace.h"
 
 // Boot Code for Telechips HD Radio
 #include "TDA7707_OM_v7.22.0.h"
 #include "TDA7707_OM_v7.22.0.boot.h"
+
+/* STAR DRIVER DEBUG INFORM OPTIONS */
+//#define TRACE_STAR_CMD_WRITE
+//#define TRACE_STAR_CMD_CHANGE_BAND
+//#define TRACE_STAR_CMD_TUNE
+//#define TRACE_STAR_CMD_SEEK
+//#define TRACE_STAR_CMD_PING
+//#define TRACE_STAR_CMD_FM_STEREO_MODE
+//#define TRACE_STAR_CMD_MUTE
+//#define TRACE_STAR_CMD_SET_VPA
+//#define TRACE_STAR_CMD_GET_RECEPTION_QUALITY
+//#define TRACE_STAR_CMD_SET_BB_IF
+//#define TRACE_STAR_CMD_CONF_BB_SAI
+//#define TRACE_STAR_CMD_CONF_JESD204
+//#define TRACE_STAR_CMD_RDS
+//#define TRACE_STAR_TUN_WAIT_READY
+//#define TRACE_STAR_TUN_GET_TUNER_BUSY_STATUS
+//#define TRACE_STAR_TUN_GET_TUNEDFREQ
 
 #if 0
 /*************************************************************************************
@@ -78,130 +95,6 @@ Tun_Status Star_Get_TunerBusyStatus(tU8 deviceAddress, int channelID, int *pBusy
 #endif
 
 	return tunerStatus; 
-}
-
-
-/*************************************************************************************
-Function		: TUN_Change_Band
-Description 	: This function executes the entire band change procedure on a specified channel.
-			Additionally specific processing features will be activated (e.g. VPA).
-			For DAB and DRM the corresponding digital base band interface is activated when this command is invoked;
-			This command additionally sets the band limits and step for Seek operations.
-			
-Parameters	:
-		deviceAddress :  star tuner I2C address.
-		channelID :
-			1  :  foreground channel
-			2  :  background channel
-			
-		bandMode :	
-			0x000000: Standby (no reception)
-			0x000001: FM
-			0x000002: Weather Band (WX)
-			0x000003: DAB Band 3
-			0x000004: DAB L-Band
-			0x000005: AM EU
-			0x000006: AM US
-			0x000007: DRM30
-			0x000008: DRM+
-			0x000009: not used
-			0x00000A: not used
-			0x00000B: not used
-			0x00000C: not used
-			0x00000D: not used
-			0x00000E: Reserved 每 do not use
-			0x00000F: Reserved 每 do not use
-			
-		maxFreq  : Upper band limit [kHz]
-		minFreq   : Lower band limit [kHz]
-		VPAMode : VPA mode : 0 - off;  1 - on.
-		
-Return Value	: Tun_Status		
-*************************************************************************************/
-Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32 maxFreq, tU32 minFreq, int seekStep, int VPAMode)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_CHANGE_BAND;
-	int cmdParamNum = 6;
-	int ansParmNum = 0;					/* if it's 0, means only return answer header and check sum */
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	assert((channelID == 1) ||(channelID == 2));
-	memset(paramData, 0x00, cmdParamNum * 3);
-	
-	paramData[2] = channelID;
-	paramData[5] = bandMode;
-	if (bandMode == 1) paramData[8] = (tU8)VPAMode;
-	paramData[9]   = (minFreq >> 16) & 0xFF;
-	paramData[10] = (minFreq  >> 8) & 0xFF;
-	paramData[11] = (minFreq & 0xFF);
-	paramData[12] = (maxFreq  >> 16) & 0xFF;
-	paramData[13] = (maxFreq >> 8) & 0xFF;
-	paramData[14] = (maxFreq & 0xFF);
-	paramData[15] = (seekStep >> 16) & 0xFF;
-	paramData[16] = (seekStep >> 8) & 0xFF;
-	paramData[17] = (seekStep & 0xFF);
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-
-#ifdef TRACE_STAR_CMD_CHANGE_BAND				
-	PRINTF("Star_Command_Communicate = %s,channelID =%d, band = %d, freqMax = %d, freqMin = %d, VPA_enable = %d", RetStatusName[tunerStatus].Name, channelID, bandMode, maxFreq, minFreq, VPAMode);
-#endif
-
-#else
-#endif	
-	return tunerStatus;
-}
-
-
-/*************************************************************************************
-Function		: TUN_Change_Frequency
-Description	: This function tunes the corresponding channel to the specified frequency. 
-			For AM/FM bands it additionally performs muting and unmuting (foreground tuner only) 
-			and initializing weak signal processing and quality detectors.
-			
-Parameters	:
-		deviceAddress :  star tuner I2C address.
-		channelID :
-			1  :  foreground channel
-			2  :  background channel
-			
-		frequency : Frequency [kHz]
-Return Value	: Tun_Status			
-*************************************************************************************/
-Tun_Status TUN_Change_Frequency (tU8 deviceAddress, int channelID, tU32 frequency)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_TUNE;
-	int cmdParamNum = 3;
-	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	assert((channelID == 1) ||(channelID == 2));
-	memset(paramData, 0x00, cmdParamNum * 3);
-	
-	paramData[2] = channelID;
-	paramData[3] = (frequency >> 16) & 0xFF;
-	paramData[4] = (frequency >> 8) & 0xFF;
-	paramData[5] = (frequency & 0xFF);
-	paramData[8] = INJECTION_SIDE_AUTO;
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-
-#ifdef TRACE_STAR_CMD_TUNE				
-	PRINTF("Star_Command_Communicate = %s, frequency = %d, deviceAddr = 0x%02x", RetStatusName[tunerStatus].Name, frequency, deviceAddress);
-#endif
-
-#else
-#endif	
-
-	return tunerStatus;
 }
 
 
@@ -1496,7 +1389,135 @@ Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData)
 	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
 	
 #ifdef TRACE_STAR_CMD_WRITE	
-	PRINTF("Star_Command_Communicate= %s, deviceAddress= 0x%02x, regAddress= 0x%06x, cmdParamNum= %d, data= 0x%06x", RetStatusName[tunerStatus].Name, deviceAddress, regAddress, cmdParamNum, regData);
+	//PRINTF("Star_Command_Communicate= %s, deviceAddress= 0x%02x, regAddress= 0x%06x, cmdParamNum= %d, data= 0x%06x", RetStatusName[tunerStatus].Name, deviceAddress, regAddress, cmdParamNum, regData);
+    printf("[%s] Star_Command_Communicate = %d, regAddress= 0x%06x, cmdParamNum= %d, data= 0x%06x \n",
+        __func__, tunerStatus, regAddress, cmdParamNum, regData);
+#endif
+
+	return tunerStatus;
+}
+
+
+/*************************************************************************************
+Function		: TUN_Change_Band
+Description 	: This function executes the entire band change procedure on a specified channel.
+			Additionally specific processing features will be activated (e.g. VPA).
+			For DAB and DRM the corresponding digital base band interface is activated when this command is invoked;
+			This command additionally sets the band limits and step for Seek operations.
+			
+Parameters	:
+		deviceAddress :  star tuner I2C address.
+		channelID :
+			1  :  foreground channel
+			2  :  background channel
+			
+		bandMode :	
+			0x000000: Standby (no reception)
+			0x000001: FM
+			0x000002: Weather Band (WX)
+			0x000003: DAB Band 3
+			0x000004: DAB L-Band
+			0x000005: AM EU
+			0x000006: AM US
+			0x000007: DRM30
+			0x000008: DRM+
+			0x000009: not used
+			0x00000A: not used
+			0x00000B: not used
+			0x00000C: not used
+			0x00000D: not used
+			0x00000E: Reserved 每 do not use
+			0x00000F: Reserved 每 do not use
+			
+		maxFreq  : Upper band limit [kHz]
+		minFreq   : Lower band limit [kHz]
+		VPAMode : VPA mode : 0 - off;  1 - on.
+		
+Return Value	: Tun_Status		
+*************************************************************************************/
+Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32 maxFreq, tU32 minFreq, int seekStep, int VPAMode)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_CHANGE_BAND;
+	int cmdParamNum = 6;
+	int ansParmNum = 0;					/* if it's 0, means only return answer header and check sum */
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
+
+	assert((channelID == 1) ||(channelID == 2));
+	memset(paramData, 0x00, cmdParamNum * 3);
+	
+	paramData[2] = channelID;
+	paramData[5] = bandMode;
+#if 0
+	if (bandMode == 1) paramData[8] = (tU8)VPAMode;
+#else
+    paramData[8] = 0x10; // Param. 3 Bit [4] : 1 ==> for HD and DRM30 reception, Bit [0] : 0 ==> no phase div.
+#endif
+	paramData[9]   = (minFreq >> 16) & 0xFF;
+	paramData[10] = (minFreq  >> 8) & 0xFF;
+	paramData[11] = (minFreq & 0xFF);
+	paramData[12] = (maxFreq  >> 16) & 0xFF;
+	paramData[13] = (maxFreq >> 8) & 0xFF;
+	paramData[14] = (maxFreq & 0xFF);
+	paramData[15] = (seekStep >> 16) & 0xFF;
+	paramData[16] = (seekStep >> 8) & 0xFF;
+	paramData[17] = (seekStep & 0xFF);
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+
+#ifdef TRACE_STAR_CMD_CHANGE_BAND				
+	//PRINTF("Star_Command_Communicate = %s,channelID =%d, band = %d, freqMax = %d, freqMin = %d, VPA_enable = %d", RetStatusName[tunerStatus].Name, channelID, bandMode, maxFreq, minFreq, VPAMode);
+    printf("[%s] Star_Command_Communicate = %d, channelID =%d, band = %d, freqMax = %d, freqMin = %d \n",
+            __func__, tunerStatus, channelID, bandMode, maxFreq, minFreq);
+#endif
+
+    (void) VPAMode;
+
+	return tunerStatus;
+}
+
+
+/*************************************************************************************
+Function		: TUN_Change_Frequency
+Description	: This function tunes the corresponding channel to the specified frequency. 
+			For AM/FM bands it additionally performs muting and unmuting (foreground tuner only) 
+			and initializing weak signal processing and quality detectors.
+			
+Parameters	:
+		deviceAddress :  star tuner I2C address.
+		channelID :
+			1  :  foreground channel
+			2  :  background channel
+			
+		frequency : Frequency [kHz]
+Return Value	: Tun_Status			
+*************************************************************************************/
+Tun_Status TUN_Change_Frequency (tU8 deviceAddress, int channelID, tU32 frequency)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_TUNE;
+	int cmdParamNum = 3;
+	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
+
+	assert((channelID == 1) ||(channelID == 2));
+	memset(paramData, 0x00, cmdParamNum * 3);
+	
+	paramData[2] = channelID;
+	paramData[3] = (frequency >> 16) & 0xFF;
+	paramData[4] = (frequency >> 8) & 0xFF;
+	paramData[5] = (frequency & 0xFF);
+	paramData[8] = INJECTION_SIDE_AUTO;
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+
+#ifdef TRACE_STAR_CMD_TUNE				
+	//PRINTF("Star_Command_Communicate = %s, frequency = %d, deviceAddr = 0x%02x", RetStatusName[tunerStatus].Name, frequency, deviceAddress);
+    printf("[%s] Star_Command_Communicate = %d, channelID = %d, frequency = %d \n", __func__, tunerStatus, channelID, frequency);
 #endif
 
 	return tunerStatus;
@@ -1543,7 +1564,8 @@ Tun_Status TUN_conf_BB_SAI(tU8 deviceAddress, tU32 mode, tU32 config)
 	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
 
 #ifdef TRACE_STAR_CMD_CONF_BB_SAI
-	PRINTF("Star_Command_Communicate = %s, mode = 0x%06x, config = 0x%06x", RetStatusName[tunerStatus].Name, mode, config);
+	//PRINTF("Star_Command_Communicate = %s, mode = 0x%06x, config = 0x%06x", RetStatusName[tunerStatus].Name, mode, config);
+    printf("[%s] Star_Command_Communicate = %d, mode = 0x%06x, config = 0x%06x \n", __func__, tunerStatus, mode, config);
 #endif
 
 	return tunerStatus;
@@ -1606,7 +1628,8 @@ Tun_Status TUN_Set_Audio_IF(tU8 deviceAddress, tU8 SAIMode, tU32 SAIConfig)
 	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
 
 #ifdef TRACE_STAR_CMD_CONF_BB_SAI
-	PRINTF("Star_Command_Communicate = %s, SAIMode = 0x%06x, SAIConfig = 0x%06x", RetStatusName[tunerStatus].Name, SAIMode, SAIConfig);
+	//PRINTF("Star_Command_Communicate = %s, SAIMode = 0x%06x, SAIConfig = 0x%06x", RetStatusName[tunerStatus].Name, SAIMode, SAIConfig);
+    printf("[%s] Star_Command_Communicate = %d, SAIMode = 0x%06x, SAIConfig = 0x%06x \n", __func__, tunerStatus, SAIMode, SAIConfig);
 #endif
 
 	return tunerStatus;
@@ -1644,7 +1667,8 @@ Tun_Status TUN_Set_BB_IF(tU8 deviceAddress, tU32 BBConfig)
 	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
 
 #ifdef TRACE_STAR_CMD_SET_BB_IF			
-	PRINTF("Star_Command_Communicate = %s, BBConfig = %d", RetStatusName[tunerStatus].Name, BBConfig);
+	//PRINTF("Star_Command_Communicate = %s, BBConfig = %d", RetStatusName[tunerStatus].Name, BBConfig);
+    printf("[%s] Star_Command_Communicate = %d, BBConfig = %d \n", __func__, tunerStatus, BBConfig);
 #endif
 
 	return tunerStatus;
