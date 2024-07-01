@@ -17,7 +17,7 @@ int main(void)
 
     unsigned char read_data[4];
 
-    printf("2024. 6. 28 #2 4096 test\n");
+    printf("2024. 7. 1 #2 test\n");
 
     star_tuner_reset();
 
@@ -61,9 +61,30 @@ int main(void)
         return RET_ERR_BOOTCODE;
     }
 
+    tunerStatus = TUN_Download_CustomizedCoeffs(I2C_SLAVE_ADDRESS);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("TUN_Download_CustomizedCoeffs fail\n");
+        return RET_ERR_BOOTCODE;
+    }
+    else
+    {
+        printf("CustomizedCoeffs has been succefully downloaded.\n");
+    }
+
 #if 0
+    // BB SAI setting
+    tunerStatus = TUN_conf_BB_SAI(I2C_SLAVE_ADDRESS, 0x07, 0x01);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("BB SAI setting fail (%d)\n", tunerStatus);
+        return RET_ERR_I2C_COMM;
+    }
+
     // set BB IF
-    tunerStatus = TUN_Set_BB_IF(I2C_SLAVE_ADDRESS, 0x010000);
+    tunerStatus = TUN_Set_BB_IF(I2C_SLAVE_ADDRESS, 0x040005);
 
     if (tunerStatus != RET_SUCCESS)
     {
@@ -72,7 +93,7 @@ int main(void)
     }
 
     // set Audio IF 
-    tunerStatus = TUN_Set_Audio_IF(I2C_SLAVE_ADDRESS, 0x03, 0x000330);
+    tunerStatus = TUN_Set_Audio_IF(I2C_SLAVE_ADDRESS, 0x03, 0xA57310);
 
     if (tunerStatus != RET_SUCCESS)
     {

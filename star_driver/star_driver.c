@@ -29,7 +29,7 @@
 #include "radio_trace.h"
 
 // Boot Code for Telechips HD Radio
-//#include "TDA7707_OM_v7.22.0."
+#include "TDA7707_OM_v7.22.0.h"
 #include "TDA7707_OM_v7.22.0.boot.h"
 
 #if 0
@@ -78,50 +78,6 @@ Tun_Status Star_Get_TunerBusyStatus(tU8 deviceAddress, int channelID, int *pBusy
 #endif
 
 	return tunerStatus; 
-}
-
-
-/*************************************************************************************
-Function		: TUN_Cmd_Write
-Description	: This function performs a write operation to tuner' register. 
-			
-Parameters	:
-		deviceAddress :  star tuner I2C address.
-		regAddress :  STAR DSP memory Addr or non-DSP memory addr.
-		regData  :  the data which need be written to tuner.
-			 
-Return Value	: Tun_Status			
-*************************************************************************************/
-Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_WRITE;	
-	int cmdParamNum = 2;
-	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	memset(paramData, 0x00, cmdParamNum * 3);
-	
-	paramData[0] = (regAddress >> 16) & 0xFF;
-	paramData[1] = (regAddress >> 8) & 0xFF;
-	paramData[2] = (regAddress) & 0xFF;
-	paramData[3] = (regData >> 16) & 0xFF;
-	paramData[4] = (regData >> 8) & 0xFF;
-	paramData[5] = (regData) & 0xFF;
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-	
-#ifdef TRACE_STAR_CMD_WRITE	
-	PRINTF("Star_Command_Communicate= %s, deviceAddress= 0x%02x, regAddress= 0x%06x, cmdParamNum= %d, data= 0x%06x", RetStatusName[tunerStatus].Name, deviceAddress, regAddress, cmdParamNum, regData);
-#endif
-	
-#else
-#endif
-
-	return tunerStatus;
 }
 
 
@@ -849,57 +805,6 @@ Tun_Status TUN_Get_ChannelQuality (tU8 deviceAddress, int channelID, tBool bVPAM
 	return tunerStatus;
 }
 
-
-/*************************************************************************************
-Function		: TUN_conf_BB_SAI
-Description	: This function is used to configure the baseband SAI interface.
-			The SAI is configured either in MUX mode or AFE mode.
-				I and Q data length is 16bit each. Data alignment in one frame is:
-				Without status bits: I(16) + Q(16)
-				With status bits: I(16) + S1(16) + Q(16) + S2(16)
-			MUX mode:
-				Symmetrical word clock - one sample delayed (I2S mode), start of new frame at falling edge
-			AFE mode:
-				Word clock is a one-bit clock burst, start of new frame at falling edge
-				The content of the status bits is described in the command description manual.
-			This function must be calleded before calling TUN_Set_BB_IF.
-			
-Parameters	:
-		deviceAddress :  Star tuner I2C address.
-		mode  :	SAI mode
-		config : 	Configuration
-			
-Return Value	: Tun_Status					
-*************************************************************************************/
-Tun_Status TUN_conf_BB_SAI(tU8 deviceAddress, tU32 mode, tU32 config)
-{
-	Tun_Status tunerStatus = RET_ERROR;
-	int cmdID = CMD_CODE_TUNER_CONF_BB_SAI;
-	int cmdParamNum = 2;
-	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
-	int realAnsParamNum;
-	tU8 paramData[cmdParamNum * 3];
-	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
-
-	memset(paramData, 0x00, cmdParamNum * 3);
-	paramData[2] = mode;
-	paramData[3] = (config >> 16) & 0xFF;
-	paramData[4] = (config >> 8) & 0xFF;
-	paramData[5] = (config & 0xFF);
-
-#ifdef STAR_COMM_BUS_I2C
-	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
-
-#ifdef TRACE_STAR_CMD_CONF_BB_SAI
-	PRINTF("Star_Command_Communicate = %s, mode = 0x%06x, config = 0x%06x", RetStatusName[tunerStatus].Name, mode, config);
-#endif
-
-#else
-#endif	
-
-	return tunerStatus;
-}
-
 /*************************************************************************************
 Function		: TUN_conf_JESD204
 Description	: This function is used to configure the JESD204 baseband interface.		
@@ -1542,6 +1447,110 @@ Tun_Status TUN_Get_TunedFreq(tU8 deviceAddress, int channelID, tU32 *pFreq)
 
 
 /*************************************************************************************
+Function		: TUN_Cmd_Write
+Description	: This function performs a write operation to tuner' register. 
+			
+Parameters	:
+		deviceAddress :  star tuner I2C address.
+		regAddress :  STAR DSP memory Addr or non-DSP memory addr.
+		regData  :  the data which need be written to tuner.
+			 
+Return Value	: Tun_Status			
+*************************************************************************************/
+Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_WRITE;	
+	int cmdParamNum = 3;
+	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
+
+	memset(paramData, 0x00, cmdParamNum * 3);
+	
+	paramData[0] = (regAddress >> 16) & 0xFF;
+	paramData[1] = (regAddress >> 8) & 0xFF;
+	paramData[2] = (regAddress) & 0xFF;
+
+    // If bit 19 is 1, then the address is in the DSP memory space and the data word has 24 bits.
+    // if bit 19 is 0, then the address is elsewhere and the data word has 32 bits.
+    if((regAddress & 0x080000) == 0)
+    {
+        cmdParamNum = 3;
+	    paramData[3] = (regData >> 24) & 0xFF;
+	    paramData[4] = (regData >> 16) & 0xFF;
+	    paramData[5] = (regData >> 8) & 0xFF;
+	    paramData[6] = (regData >> 16) & 0xFF;
+	    paramData[7] = (regData >> 8) & 0xFF;
+	    paramData[8] = (regData) & 0xFF;
+    }
+    else
+    {
+        cmdParamNum = 2;
+	    paramData[3] = (regData >> 16) & 0xFF;
+	    paramData[4] = (regData >> 8) & 0xFF;
+	    paramData[5] = (regData) & 0xFF;
+    }
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+	
+#ifdef TRACE_STAR_CMD_WRITE	
+	PRINTF("Star_Command_Communicate= %s, deviceAddress= 0x%02x, regAddress= 0x%06x, cmdParamNum= %d, data= 0x%06x", RetStatusName[tunerStatus].Name, deviceAddress, regAddress, cmdParamNum, regData);
+#endif
+
+	return tunerStatus;
+}
+
+
+/*************************************************************************************
+Function		: TUN_conf_BB_SAI
+Description	: This function is used to configure the baseband SAI interface.
+			The SAI is configured either in MUX mode or AFE mode.
+				I and Q data length is 16bit each. Data alignment in one frame is:
+				Without status bits: I(16) + Q(16)
+				With status bits: I(16) + S1(16) + Q(16) + S2(16)
+			MUX mode:
+				Symmetrical word clock - one sample delayed (I2S mode), start of new frame at falling edge
+			AFE mode:
+				Word clock is a one-bit clock burst, start of new frame at falling edge
+				The content of the status bits is described in the command description manual.
+			This function must be calleded before calling TUN_Set_BB_IF.
+			
+Parameters	:
+		deviceAddress :  Star tuner I2C address.
+		mode  :	SAI mode
+		config : 	Configuration
+			
+Return Value	: Tun_Status					
+*************************************************************************************/
+Tun_Status TUN_conf_BB_SAI(tU8 deviceAddress, tU32 mode, tU32 config)
+{
+	Tun_Status tunerStatus = RET_ERROR;
+	int cmdID = CMD_CODE_TUNER_CONF_BB_SAI;
+	int cmdParamNum = 2;
+	int ansParmNum = 0;					/*if it's 0, means only return answer header and check sum*/
+	int realAnsParamNum;
+	tU8 paramData[cmdParamNum * 3];
+	tU8 answerData[(ansParmNum + 2) * 3];	/* answer data include asnwer header, answer param and check sum */
+
+	memset(paramData, 0x00, cmdParamNum * 3);
+	paramData[2] = mode;
+	paramData[3] = (config >> 16) & 0xFF;
+	paramData[4] = (config >> 8) & 0xFF;
+	paramData[5] = (config & 0xFF);
+
+	tunerStatus = Star_Command_Communicate(deviceAddress, cmdID, cmdParamNum, paramData, ansParmNum, answerData, FALSE, &realAnsParamNum, TRUE);
+
+#ifdef TRACE_STAR_CMD_CONF_BB_SAI
+	PRINTF("Star_Command_Communicate = %s, mode = 0x%06x, config = 0x%06x", RetStatusName[tunerStatus].Name, mode, config);
+#endif
+
+	return tunerStatus;
+}
+
+
+/*************************************************************************************
 Function		: TUN_Set_Audio_IF
 Description	: This function is used to set the audio DAC and audio SAI input and output channel.
 			
@@ -1694,7 +1703,6 @@ Tun_Status TUN_Download_BootCode(tU8 deviceAddress)
 	return tunerStatus;
 }
 
-#if 0
 /*************************************************************************************
 Function		: TUN_Download_CustomizedCoeffs
 Description	: this function is used to write customized data in array(CUSTOM_ARRAY) to Star tuner by write mem command
@@ -1708,19 +1716,32 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress)
 {
 	Tun_Status tunerStatus = RET_SUCCESS;
 
-#ifdef STAR_CUSTOMIZED_SETTING
-	int i,	 array_size;
-	
-	array_size = sizeof(CUSTOM_ARRAY)/sizeof(tCoeffInit);
-		
-	for (i = 0;  i < array_size; i++)
-	{
-		TUN_Cmd_Write(deviceAddress, CUSTOM_ARRAY[i].coeffAddr, CUSTOM_ARRAY[i].coeffVal);
-	}
-#endif
+    tunerStatus = TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg06High, 0x70409B);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg06Low, 0x409B0A);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg07High, 0x80C60A);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg07Low, 0xC60A00);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg08High, 0x00F000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg08Low, 0xF00000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___saiBBReg00DisHigh, 0x810006);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___saiBBReg00DisLow, 0x000611);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___saiBBReg00EnHigh, 0x810016);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___saiBBReg00EnLow, 0x001611);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___flags, 0x000002);
+        
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBBReg00DisHigh, 0x010000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBBReg00DisLow, 0x000000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB912Reg01High, 0x0D0E54);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB912Reg01Low, 0x0E5400);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg01High, 0x1A1CAA);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg01Low, 0x1CAA00);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBBReg03High, 0xFF0100);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBBReg03Low, 0x010000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB912Reg00EnHigh, 0x000103);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB912Reg00EnLow, 0x0103F0);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg00EnHigh, 0x000303);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg00EnLow, 0x0303F0);
 
 	return tunerStatus;
 }
-#endif
 
 
