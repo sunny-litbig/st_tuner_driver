@@ -1915,6 +1915,7 @@ int star_open(stTUNER_DRV_CONFIG_t type)
 {
     Tun_Status tunerStatus = RET_ERROR;
     unsigned char read_data[4];
+    int ret = 0;
 
     gStarConf = type;
 
@@ -1923,6 +1924,11 @@ int star_open(stTUNER_DRV_CONFIG_t type)
     memset(star_drv_current_band, 0xff, sizeof(star_drv_current_band));
     memset(star_drv_fm_frequency, 0xff, sizeof(star_drv_fm_frequency));
     memset(star_drv_am_frequency, 0xff, sizeof(star_drv_am_frequency));
+
+    ret = star_i2c_open();
+
+    if (ret < 0)
+        return eRET_NG_UNKNOWN;
 
     star_tuner_reset();
 
@@ -2022,9 +2028,11 @@ int star_open(stTUNER_DRV_CONFIG_t type)
         printf("Audio IF setup is complete.\n");
     }
 
+#if 0
     // initial tune
     tunerStatus = star_setTune(type.initMode, type.initFreq, 0, eTUNER_DRV_ID_PRIMARY);
     tunerStatus |= star_setTune(type.initMode, type.initFreq, 0, eTUNER_DRV_ID_SECONDARY);
+#endif
     
     if (tunerStatus != RET_SUCCESS)
     {
@@ -2037,4 +2045,23 @@ int star_open(stTUNER_DRV_CONFIG_t type)
     }
 }
 
+int star_close(void)
+{
+    int ret = 0;
+
+    ret = star_i2c_close();
+
+    if (ret < 0)
+        return eRET_NG_UNKNOWN;
+    
+    star_tuner_reset();
+    
+    star_drv_initialized = 0;
+
+    memset(star_drv_current_band, 0xff, sizeof(star_drv_current_band));
+    memset(star_drv_fm_frequency, 0xff, sizeof(star_drv_fm_frequency));
+    memset(star_drv_am_frequency, 0xff, sizeof(star_drv_am_frequency));
+
+    return ret;
+}
 

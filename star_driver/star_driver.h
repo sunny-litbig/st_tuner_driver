@@ -278,6 +278,7 @@ int star_setMute(unsigned int fOnOff, unsigned int ntuner);
 #endif
 
 int star_open(stTUNER_DRV_CONFIG_t type);
+int star_close(void);
 
 #endif /* H_STAR_DRIVER */
 
