@@ -23,8 +23,7 @@
 #include <assert.h>
 #include <sys/time.h>
 
-#include "radio_public.h"
-#include "radio_trace.h"
+#include "star_public.h"
 #include "star_protocol.h"
 
 /*************************************************************************************

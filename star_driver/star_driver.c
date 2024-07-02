@@ -23,13 +23,48 @@
 #include <sys/time.h>
 #include <errno.h>
 
-#include "radio_public.h"
+#include "star_gpio.h"
+#include "star_public.h"
 #include "star_protocol.h"
 #include "star_driver.h"
 
 // Boot Code for Telechips HD Radio
 #include "TDA7707_OM_v7.22.0.h"
 #include "TDA7707_OM_v7.22.0.boot.h"
+
+#define I2C_SLAVE_ADDRESS   0x61
+#define STAR_MAX_TUNER_IC_NUM   (4)
+
+#define	STAR_DRIVER_VER_PREFIX__			'T'
+#define	STAR_DRIVER_VER_RELEASE_NUMBER__	0x01U
+#define	STAR_DRIVER_VER_MAJOR_NUMBER__		0x00U
+#define	STAR_DRIVER_VER_MINOR_NUMBER__		0x00U
+
+stTUNER_DRV_CONFIG_t gStarConf;
+
+unsigned int star_drv_initialized = 0;
+unsigned int star_drv_current_band[STAR_MAX_TUNER_IC_NUM] = {-1, -1, -1, -1};
+unsigned int star_drv_fm_frequency[STAR_MAX_TUNER_IC_NUM] = {-1, -1, -1, -1};
+unsigned int star_drv_am_frequency[STAR_MAX_TUNER_IC_NUM] = {-1, -1, -1, -1};
+
+stSTAR_BAND_INFO_t stAreaBands[eTUNER_DRV_CONF_AREA_MAX][2] =
+{
+	{
+		/*          BandMode, MaxFreq, MinFreq, SeekStep, TuneStep, TunerBandID, BandFreq*/
+		{ eTUNER_DRV_FM_MODE,  108000,   87500,      100,      100,        0x01,    87500},
+		{ eTUNER_DRV_AM_MODE,    1620,     520,        9,        9,        0x06,      520}
+	},
+	{
+		/*          BandMode, MaxFreq, MinFreq, SeekStep, TuneStep, TunerBandID, BandFreq*/
+		{ eTUNER_DRV_FM_MODE,  108000,   87500,      100,       50,        0x01, 	87500},
+		{ eTUNER_DRV_AM_MODE,    1620,     522, 	   9,        9,        0x05,      522}
+	},
+	{
+		/*          BandMode, MaxFreq, MinFreq, SeekStep, TuneStep, TunerBandID, BandFreq*/
+		{ eTUNER_DRV_FM_MODE,  107900,   87500,      200,      200,        0x01,    87500},
+		{ eTUNER_DRV_AM_MODE,    1710,     530,       10,       10,        0x06,      530}    /* 1720 -> 1710 TDA7707&7708 MCU guidelines*/
+	}
+};
 
 /* STAR DRIVER DEBUG INFORM OPTIONS */
 //#define TRACE_STAR_CMD_WRITE
@@ -1455,7 +1490,7 @@ Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32
 #else
     paramData[8] = 0x10; // Param. 3 Bit [4] : 1 ==> for HD and DRM30 reception, Bit [0] : 0 ==> no phase div.
 #endif
-	paramData[9]   = (minFreq >> 16) & 0xFF;
+	paramData[9] = (minFreq >> 16) & 0xFF;
 	paramData[10] = (minFreq  >> 8) & 0xFF;
 	paramData[11] = (minFreq & 0xFF);
 	paramData[12] = (maxFreq  >> 16) & 0xFF;
@@ -1766,6 +1801,240 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress)
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg00EnLow, 0x0303F0);
 
 	return tunerStatus;
+}
+
+unsigned int star_getVersion(void)
+{
+	return (((unsigned int)STAR_DRIVER_VER_PREFIX__<<24) | ((unsigned int)STAR_DRIVER_VER_RELEASE_NUMBER__<<16) |
+			((unsigned int)STAR_DRIVER_VER_MAJOR_NUMBER__<<8) | ((unsigned int)STAR_DRIVER_VER_MINOR_NUMBER__<<0));
+}
+
+float star_getPreciseIqSampleRate(void)
+{
+	return 744187.0;
+}
+
+int star_getIqSampleRate(void)
+{
+	return 744187;
+}
+
+int star_getIqSamplingBit(void)
+{
+	return 16;
+}
+
+int star_setBand(int mod_mode, int channelID)
+{
+    Tun_Status tunerStatus = RET_ERROR;
+    int bandMode;
+    unsigned int maxFreq;
+    unsigned int minFreq;
+    unsigned int seekStep;
+    unsigned int VPAMode = 0;
+    
+    bandMode = stAreaBands[gStarConf.area][mod_mode].tunerBandID;
+    maxFreq = stAreaBands[gStarConf.area][mod_mode].maxFreq;
+    minFreq = stAreaBands[gStarConf.area][mod_mode].minFreq;
+    seekStep = stAreaBands[gStarConf.area][mod_mode].seekStep;
+
+    tunerStatus = TUN_Change_Band(I2C_SLAVE_ADDRESS, channelID, bandMode, maxFreq, minFreq, seekStep, VPAMode);
+
+    return tunerStatus;
+}
+
+int starhal_getTunerCh(unsigned int ntuner)
+{
+    int val = 1;
+
+    if(ntuner == eTUNER_DRV_ID_SECONDARY || ntuner == eTUNER_DRV_ID_QUATERNARY)
+        val = 2;
+
+    return val;
+}
+
+int star_setTune(unsigned int mod_mode, unsigned int freq, unsigned int tune_mode, unsigned int ntuner)
+{
+    Tun_Status tunerStatus = RET_ERROR;
+
+    int channelID;
+
+    (void)tune_mode;
+
+    if (ntuner > eTUNER_DRV_ID_SECONDARY)
+        return eRET_NG_UNKNOWN;
+
+    channelID = starhal_getTunerCh(ntuner);
+
+    if(star_drv_current_band[ntuner] != mod_mode)
+        tunerStatus = star_setBand(mod_mode, channelID);
+
+    usleep(300);
+
+    if (tunerStatus == RET_SUCCESS)
+        tunerStatus = TUN_Change_Frequency(I2C_SLAVE_ADDRESS, channelID, freq);
+
+    if (tunerStatus == RET_SUCCESS)
+        return eRET_OK;
+    else
+        return eRET_NG_UNKNOWN;
+}
+
+int star_getTune(unsigned int *mod_mode, unsigned int *curfreq, unsigned int ntuner)
+{
+	RET ret = eRET_OK;
+
+	*mod_mode = star_drv_current_band[ntuner];
+
+	if(*mod_mode == eTUNER_DRV_AM_MODE) {
+		*curfreq = star_drv_am_frequency[ntuner];
+	}
+	else if(*mod_mode == eTUNER_DRV_FM_MODE) {
+		*curfreq = star_drv_fm_frequency[ntuner];
+	}
+#if 0
+	else {
+		*curfreq = star_drv_dab_frequency[ntuner];
+	}
+#else
+	else {
+		ret = eRET_NG_UNKNOWN;
+	}
+#endif
+
+	return ret;
+}
+
+#if 0
+RET star_getQuality(uint32 mod_mode, stSTAR_DRV_QUALITY_t *qdata, uint32 ntuner){}
+
+RET star_setMute(uint32 fOnOff, uint32 ntuner){}
+#endif
+
+int star_open(stTUNER_DRV_CONFIG_t type)
+{
+    Tun_Status tunerStatus = RET_ERROR;
+    unsigned char read_data[4];
+
+    gStarConf = type;
+
+    star_drv_initialized = 0;
+
+    memset(star_drv_current_band, 0xff, sizeof(star_drv_current_band));
+    memset(star_drv_fm_frequency, 0xff, sizeof(star_drv_fm_frequency));
+    memset(star_drv_am_frequency, 0xff, sizeof(star_drv_am_frequency));
+
+    star_tuner_reset();
+
+    // for Tunner communication check
+    memset(read_data, 0, 4);
+    tunerStatus = Star_I2C_Direct_Read(I2C_SLAVE_ADDRESS, STAR_ADDRESS_PRECHECKING, read_data, 4);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("STAR_ADDRESS_PRECHECKING Star_I2C_Direct_Read fail\n");
+        return eRET_NG_UNKNOWN;
+    }
+
+    printf("STAR_ADDRESS_PRECHECKING read result : %02x %02x %02x %02x\n", read_data[0], read_data[1], read_data[2], read_data[3]);
+
+    tunerStatus = TUN_Download_BootCode(I2C_SLAVE_ADDRESS);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("TUN_Download_BootCode fail\n");
+        return eRET_NG_UNKNOWN;
+    }
+
+    usleep(200 * 1000);  // wait 200 ms
+
+    memset(read_data, 0 ,4);
+    tunerStatus = Star_I2C_Direct_Read(I2C_SLAVE_ADDRESS, STAR_ADDRESS_CMDBUFFER, read_data, 4);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("STAR_ADDRESS_CMDBUFFER Star_I2C_Direct_Read fail\n");
+        return eRET_NG_UNKNOWN;
+    }
+
+    printf("STAR_ADDRESS_CMDBUFFER read result : %02x %02x %02x %02x\n", read_data[0], read_data[1], read_data[2], read_data[3]);
+
+    //if (read_data[0] == 0xAF && read_data[1] == 0xFE && read_data[2] == 0x42 && read_data[3] == 0x00)
+    if ((read_data[0] != 0xAF) || (read_data[1] != 0xFE) || (read_data[2] != 0x42) || (read_data[3] != 0x00))
+    {
+        return eRET_NG_UNKNOWN;
+    }
+
+    tunerStatus = TUN_Download_CustomizedCoeffs(I2C_SLAVE_ADDRESS);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("TUN_Download_CustomizedCoeffs fail\n");
+        return eRET_NG_UNKNOWN;
+    }
+    else
+    {
+        printf("CustomizedCoeffs has been succefully downloaded.\n");
+    }
+
+    // BB SAI setting
+    // 0x07 ==> Mode7
+    // 0x01 ==> master "half cycle" mode (for TDA7707 single only case)
+    tunerStatus = TUN_conf_BB_SAI(I2C_SLAVE_ADDRESS, 0x07, 0x01);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("BB SAI setup fail (%d)\n", tunerStatus);
+        return eRET_NG_UNKNOWN;
+    }
+    else
+    {
+        printf("BB SAI setup is complete.\n");
+    }
+
+    // set BB IF
+    // 0x04 ==> Audio interface mode 4
+    // 0x05 ==> Base Band (IF) interface SAI BB split mode 
+    tunerStatus = TUN_Set_BB_IF(I2C_SLAVE_ADDRESS, 0x040005);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("BB IF setup fail (%d)\n", tunerStatus);
+        return eRET_NG_UNKNOWN;
+    }
+    else
+    {
+        printf("BB IF setup is complete.\n");
+    }
+
+    // set Audio IF
+    // 0x03 ==> audio SAI output enable and DAC enable
+    // Bit [23:12] 0xA57 ==> 44.1 kHz, Bit [11:0] 0x310 ==> Bit[5] 0: SAI Audio Data length is 16L + 16R 
+    tunerStatus = TUN_Set_Audio_IF(I2C_SLAVE_ADDRESS, 0x03, 0xA57310);
+
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("Audio IF setup fail (%d)\n", tunerStatus);
+        return eRET_NG_UNKNOWN;
+    }
+    else
+    {
+        printf("Audio IF setup is complete.\n");
+    }
+
+    // initial tune
+    tunerStatus = star_setTune(type.initMode, type.initFreq, 0, eTUNER_DRV_ID_PRIMARY);
+    tunerStatus |= star_setTune(type.initMode, type.initFreq, 0, eTUNER_DRV_ID_SECONDARY);
+    
+    if (tunerStatus != RET_SUCCESS)
+    {
+        printf("initial tune fail (%d)\n", tunerStatus);
+        return eRET_NG_UNKNOWN;
+    }
+    else
+    {
+        return eRET_OK;
+    }
 }
 
 

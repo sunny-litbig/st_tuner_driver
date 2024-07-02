@@ -19,6 +19,8 @@
 #ifndef H_STAR_DRIVER
 #define H_STAR_DRIVER
 
+#include "tcradio_types.h"
+#include "tcradio_drv.h"
 
 /* Star tuner Command Code list */
 
@@ -209,6 +211,16 @@ typedef struct
 	tU8 blockdata[RDSBUFFER_WORDS_MAXNUM * 3];
 } RDS_Buffer;
 
+typedef struct
+{
+	eTUNER_DRV_MOD_MODE_t	bandMode;		/* Band Mode */
+	unsigned int maxFreq;		/* Max freq */
+	unsigned int minFreq;		/* Min freq */
+	int seekStep;		/* seek step */
+	int tuneStep;	  	/* For step up/down */
+	int tunerBandID;	/* Tuner band ID used in Tuner Star command 'change band'*/
+	unsigned int bandFreq;		/* When change band, default tune to this default frequency. */
+}stSTAR_BAND_INFO_t;
 
 Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData);
 Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32 maxFreq, tU32 minFreq, int seekStep, int VPAMode);
@@ -249,6 +261,23 @@ Tun_Status TUN_Download_BootCode(tU8 deviceAddress);
 #endif
 Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress);
 
+/***************************************************
+*           interface with tcradio_hal             *
+****************************************************/
+
+unsigned int star_getVersion(void);
+float star_getPreciseIqSampleRate(void);
+int star_getIqSampleRate(void);
+int star_getIqSamplingBit(void);
+int star_setTune(unsigned int mod_mode, unsigned int freq, unsigned int tune_mode, unsigned int ntuner);
+int star_getTune(unsigned int *mod_mode, unsigned int *curfreq, unsigned int ntuner);
+
+#if 0
+int star_getQuality(unsigned int mod_mode, stSTAR_DRV_QUALITY_t *qdata, unsigned int ntuner);
+int star_setMute(unsigned int fOnOff, unsigned int ntuner);
+#endif
+
+int star_open(stTUNER_DRV_CONFIG_t type);
 
 #endif /* H_STAR_DRIVER */
 
