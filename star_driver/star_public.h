@@ -66,11 +66,13 @@ typedef enum
 	RET_ERR_MAX_NUM
 } Tun_Status;
 
+#if 0
 typedef enum 
 {
 	OFF = 0,
 	ON = 1
 }Switch_Mode;
+#endif
 
 /* Seek direction defination, please don't change the values. */
 typedef enum _SEEK_DIRECTION_

@@ -19,6 +19,7 @@
 #ifndef H_STAR_DRIVER
 #define H_STAR_DRIVER
 
+#include "star_public.h"
 #include "tcradio_types.h"
 #include "tcradio_drv.h"
 
@@ -222,9 +223,42 @@ typedef struct
 	unsigned int bandFreq;		/* When change band, default tune to this default frequency. */
 }stSTAR_BAND_INFO_t;
 
-Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData);
-Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32 maxFreq, tU32 minFreq, int seekStep, int VPAMode);
-Tun_Status TUN_Change_Frequency (tU8 deviceAddress, int channelID, tU32 frequency);
+typedef union {
+	struct {
+		unsigned int FstRF;		// Field strength before AGC (8bit int signed [dBuV])
+		unsigned int FstBB;		// Field strength after AGC (8bit int signed [dBuV])
+		unsigned int Det;			// Detuning (8bit int unsigned)
+		unsigned int Snr;			// FM RF carrier to noise (8bit int unsigned [%])
+		unsigned int Adj;			// FM Adjacent channel noise (8bit int signed [%])
+		unsigned int Dev;			// FM Deviation (7bit int unsigned)
+		unsigned int Mpth;		// FM Multipath (8bit int unsigned [%])
+		unsigned int MpxNoise;	// FM Mpx Noise (8bit int unsigned [%])
+		unsigned int Stereo;		// FM Stereo/Mono (1: Stereo, 0: Mono)
+		unsigned int CoCh;		// FM VPA Co-channel (8bit int unsigned [%], only for foreground channel)
+	} fm;
+
+	struct {
+		unsigned int FstRF;		// Field strength before AGC (8bit int signed [dBuV])
+		unsigned int FstBB;		// Field strength after AGC (8bit int signed [dBuV])
+		unsigned int Det;			// Detuning (8bit int unsigned)
+		unsigned int Snr;			// FM RF carrier to noise (8bit int unsigned [%])
+		unsigned int Adj;			// FM Adjacent channel noise (8bit int signed [%])
+		unsigned int Dev;			// FM Deviation (7bit int unsigned)
+	} am;
+
+	struct {
+		unsigned int FstRF;		// Field strength before AGC (8bit int signed [dBm])
+		unsigned int FstBB;		// Field strength after AGC (8bit int signed [dBm])
+	} dab;
+
+	struct {
+		unsigned int FstRF;		// Field strength before AGC (8bit int signed [dBuV])
+		unsigned int FstBB;		// Field strength after AGC (8bit int signed [dBuV])
+	} wx;
+}stSTAR_DRV_QUALITY_t;
+
+
+#if 0   // not use
 Tun_Status TUN_Set_Seek_Threshold (tU8 deviceAddress, int channelID, union Tun_SeekTH seekThr);
 Tun_Status TUN_Seek_Sart (tU8 deviceAddress, int channelID, Seek_Direction seekDirection, tU32 seekStep);
 Tun_Status TUN_Seek_Stop (tU8 deviceAddress, int channelID, tBool bUnmuteAudio);
@@ -244,13 +278,15 @@ Tun_Status TUN_Set_Blend(tU8 deviceAddress, tU8 blendMode);
 Tun_Status TUN_Set_RDS (tU8 deviceAddress, int channelID, RDS_Action rdsAction);
 Tun_Status TUN_Read_RDS (tU8 deviceAddress, int channelID, RDS_Buffer *pRDSbuffer);
 
-#if 0   // not use
 Tun_Status TUN_AF_Start (tU8 deviceAddress, int channelID, tU32 alterFreq, tU32 antSelection, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_End(tU8 deviceAddress, int channelID, tU32 freqAfterAFEnd, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_Check (tU8 deviceAddress, int channelID, tU32 frequency, AF_SignalQuality *pAFquality);
 Tun_Status TUN_AF_Switch (tU8 deviceAddress, int channelID, tU32 frequency);
 Tun_Status TUN_Get_AFquality (tU8 deviceAddress, int channelID, AF_SignalQuality *pAFquality);
 #endif
+Tun_Status TUN_Cmd_Write(tU8 deviceAddress, tU32 regAddress, tU32 regData);
+Tun_Status TUN_Change_Band (tU8 deviceAddress, int channelID, int bandMode, tU32 maxFreq, tU32 minFreq, int seekStep, int VPAMode);
+Tun_Status TUN_Change_Frequency (tU8 deviceAddress, int channelID, tU32 frequency);
 Tun_Status TUN_Wait_Ready(tU8 deviceAddress, int channelID, int msTimeOut);
 Tun_Status TUN_Get_TunedFreq(tU8 deviceAddress, int channelID, tU32 *pFreq);
 
@@ -266,19 +302,16 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress);
 ****************************************************/
 
 unsigned int star_getVersion(void);
-float star_getPreciseIqSampleRate(void);
-int star_getIqSampleRate(void);
-int star_getIqSamplingBit(void);
+float star_getPreciseIqSampleRate(unsigned int ntuner);
+int star_getIqSampleRate(unsigned int ntuner);
+int star_getIqSamplingBit(unsigned int ntuner);
 int star_setTune(unsigned int mod_mode, unsigned int freq, unsigned int tune_mode, unsigned int ntuner);
 int star_getTune(unsigned int *mod_mode, unsigned int *curfreq, unsigned int ntuner);
-
-#if 0
 int star_getQuality(unsigned int mod_mode, stSTAR_DRV_QUALITY_t *qdata, unsigned int ntuner);
 int star_setMute(unsigned int fOnOff, unsigned int ntuner);
-#endif
-
 int star_open(stTUNER_DRV_CONFIG_t type);
 int star_close(void);
+int star_setIQTestPattern(unsigned int fOnOff, unsigned int sel);
 
 #endif /* H_STAR_DRIVER */
 

@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "star_public.h"
 #include "star_driver.h"
 
 int main(void)
@@ -12,7 +11,7 @@ int main(void)
 
     int ret = 0;
 
-    printf("2024. 7. 2 #5 test\n");
+    printf("2024. 7. 4 #2 test\n");
 
     conf.area = eTUNER_DRV_CONF_AREA_NA;
     conf.initMode = eTUNER_DRV_FM_MODE;

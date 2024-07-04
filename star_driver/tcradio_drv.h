@@ -72,10 +72,9 @@ typedef enum {
 typedef enum {
 	eTUNER_DRV_FM_MODE 		= 0,	// FM : Frequency Modulation Mode
 	eTUNER_DRV_AM_MODE		= 1,	// AM : Amplitude Modulation Mode
-//	eTUNER_DRV_DAB_MODE		= 2		// DAB : Digital Audio Broadcasting Mode
+	eTUNER_DRV_DAB_MODE		= 2		// DAB : Digital Audio Broadcasting Mode
 } eTUNER_DRV_MOD_MODE_t;
 
-#if 0   // LB not use
 typedef enum{
 	eTUNER_DRV_TUNE_NORMAL	= 0,	// Gerneric Tune
 	eTUNER_DRV_TUNE_FAST	= 1,	// For Silab Device Tune
@@ -90,7 +89,6 @@ typedef enum {
 	eTUNER_SDR_DRMP			= 3,	// DRM+ (Digital Radio Mondiale Plus)
 	eTUNER_SDR_DAB			= 4     // DAB (Digital Audio Broadcasting)
 }eTUNER_DRV_SDR_t;
-#endif
 
 /***************************************************
 *				Typedefs					*
@@ -98,18 +96,16 @@ typedef enum {
 typedef struct {
 	eTUNER_DRV_CONF_AREA_t area;	// Regional coefficient setting of tuner driver. Not a regional frequency configuration.
 	eTUNER_DRV_MOD_MODE_t initMode;	// init Modulation Mode
-	unsigned int initFreq;				// init Frequency
-	unsigned int numTuners;				// Number of Tuners			// 1 ~ 4 (According to tuner H/W configuration)
-	unsigned int fPhaseDiversity;			// Phase Diversity Enable	// 0 : disable, 1 : enable (not used yet)
-	unsigned int fIqOut;					// IQ Out Enable			// 0 : disable, 1 : enable
-	unsigned int audioSamplerate; 		// Audio Samplerate			// 44100 : 44.1Khz, 48000 : 48Khz
-	unsigned int fExtAppCtrl;				// Control by external APP	// 0 : By radio APP, 1 : By external APP
+	uint32 initFreq;				// init Frequency
+	uint32 numTuners;				// Number of Tuners			// 1 ~ 4 (According to tuner H/W configuration)
+	uint32 fPhaseDiversity;			// Phase Diversity Enable	// 0 : disable, 1 : enable (not used yet)
+	uint32 fIqOut;					// IQ Out Enable			// 0 : disable, 1 : enable
+	uint32 audioSamplerate; 		// Audio Samplerate			// 44100 : 44.1Khz, 48000 : 48Khz
+	uint32 fExtAppCtrl;				// Control by external APP	// 0 : By radio APP, 1 : By external APP
 
-#if 0   // LB not use
 	// For SDR
 	eTUNER_DRV_SDR_t sdr;			// Software defined radio standards
-	//uint32 reserved[3];
-#endif
+	uint32 reserved[3];
 }stTUNER_DRV_CONFIG_t;
 
 /***************************************************
