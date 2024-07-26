@@ -2188,26 +2188,41 @@ int star_rds_init(unsigned int ntuner)
     }
 }
 
-int star_rds_read(unsigned int ntuner)
+int star_rds_read(unsigned int ntuner, RDS_Buffer *rds_buff_words)
 {
     Tun_Status tunerStatus = RET_SUCCESS;
     int channelID;
-    RDS_Buffer rds_buff_words;
 
     if (ntuner > eTUNER_DRV_ID_SECONDARY)
         return eRET_NG_UNKNOWN;
 
     channelID = starhal_getTunerCh(ntuner);
-    rds_buff_words.validBlockNum = 0;
-    memset(rds_buff_words.blockdata, 0x00 , (RDSBUFFER_WORDS_MAXNUM * 3));
+    rds_buff_words->validBlockNum = 0;
+    memset(rds_buff_words->blockdata, 0x00 , (RDSBUFFER_WORDS_MAXNUM * 3));
 
-    tunerStatus = TUN_Read_RDS(I2C_SLAVE_ADDRESS, channelID, &rds_buff_words);
+    tunerStatus = TUN_Read_RDS(I2C_SLAVE_ADDRESS, channelID, rds_buff_words);
 
     if (tunerStatus == RET_SUCCESS)
     {
-        if (rds_buff_words.validBlockNum > 0)
+        if (rds_buff_words->validBlockNum > 0)
         {
-            printf("[%s] validBlockNum = %d[%d]\n", __func__, rds_buff_words.validBlockNum, RDS_NORMALMODE_NRQST);
+#if 0
+            if ((rds_buff_words->validBlockNum != 4) && (rds_buff_words->validBlockNum != 8))
+            {
+                printf("[%s] validBlockNum = %d[%d]\n", __func__, rds_buff_words->validBlockNum, RDS_NORMALMODE_NRQST);
+            }
+#else
+            printf("[%s] validBlockNum = %d[%d]\n", __func__, rds_buff_words->validBlockNum, RDS_NORMALMODE_NRQST);
+
+            for (int aaa = 0; aaa < rds_buff_words->validBlockNum; aaa ++)
+            {
+                printf("aaa = %d, buffer header = %02x, BLOCKID = %x, DATA_H = %02x, DATA_L = %02x .\n",
+                        aaa, rds_buff_words->blockdata[aaa * 3], (rds_buff_words->blockdata[aaa * 3] & 0x03),
+                        rds_buff_words->blockdata[(aaa * 3) + 1], rds_buff_words->blockdata[(aaa * 3) + 2]);
+            }
+
+            printf("\n\n");
+#endif
         }
         else
         {

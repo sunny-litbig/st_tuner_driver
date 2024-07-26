@@ -8,10 +8,10 @@
 int main(void)
 {
     stTUNER_DRV_CONFIG_t conf;
-
+    RDS_Buffer rds_buff_words;
     int ret = 0;
 
-    printf("2024. 7. 15 #1 test\n");
+    printf("2024. 7. 26 #3 test\n");
 
     conf.area = eTUNER_DRV_CONF_AREA_NA;
     conf.initMode = eTUNER_DRV_FM_MODE;
@@ -44,7 +44,7 @@ int main(void)
         {
             while (1)
             {
-                ret = star_rds_read(eTUNER_DRV_ID_PRIMARY);
+                ret = star_rds_read(eTUNER_DRV_ID_PRIMARY, &rds_buff_words);
 
                 if (ret != RET_SUCCESS)
                     break;
