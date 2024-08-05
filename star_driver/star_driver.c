@@ -1798,6 +1798,7 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress)
 {
     Tun_Status tunerStatus = RET_SUCCESS;
 
+    // for IQ samplete
     tunerStatus = TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg06High, 0x70409B);
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg06Low, 0x409B0A);
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_saiConfig__7___syscoReg07High, 0x80C60A);
@@ -1822,6 +1823,17 @@ Tun_Status TUN_Download_CustomizedCoeffs(tU8 deviceAddress)
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB912Reg00EnLow, 0x0103F0);
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg00EnHigh, 0x000303);
     tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_bbifY_srcConfig__7___srcBB456Reg00EnLow, 0x0303F0);
+
+    // for audio tunning parameter
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smLevDwnLim, 0xfb4000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smWghtSht, 0x000004);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smLev_o, 0x02aaab);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smMp_g, 0xe55555);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smMp_o, 0x100000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smDist_o, 0x100000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smDist_g, 0xb00000);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smLev_g, 0x444444);
+    tunerStatus |= TUN_Cmd_Write(deviceAddress, TDA7707_fmCoef_wsp_smLevUpLim, 0x0a8000);
 
     return tunerStatus;
 }
@@ -2059,7 +2071,6 @@ int star_open(stTUNER_DRV_CONFIG_t type)
 
     printf("STAR_ADDRESS_CMDBUFFER read result : %02x %02x %02x %02x\n", read_data[0], read_data[1], read_data[2], read_data[3]);
 
-    //if (read_data[0] == 0xAF && read_data[1] == 0xFE && read_data[2] == 0x42 && read_data[3] == 0x00)
     if ((read_data[0] != 0xAF) || (read_data[1] != 0xFE) || (read_data[2] != 0x42) || (read_data[3] != 0x00))
     {
         return eRET_NG_UNKNOWN;
